@@ -12,6 +12,8 @@ import {
 } from 'prop-types';
 import { AutoSizer, List as VirtualList } from 'react-virtualized';
 import { List } from 'immutable';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import ansiparse from '../../ansiparse';
 import { decode, encode } from '../../encoding';
 import {
@@ -117,6 +119,10 @@ export default class LazyLog extends Component {
      */
     enableSearch: bool,
     /**
+     * Debounce for search.
+     */
+    searchDebounce: number,
+    /**
      * Execute a function against each string part of a line,
      * returning a new line part. Is passed a single argument which is
      * the string part to manipulate, should return a new string
@@ -194,6 +200,7 @@ export default class LazyLog extends Component {
     highlight: null,
     selectableLines: false,
     enableSearch: false,
+    searchDebounce: 0,
     rowHeight: 19,
     overscanRowCount: 100,
     containerStyle: {
@@ -265,8 +272,15 @@ export default class LazyLog extends Component {
     resultLines: [],
   };
 
+  searchSubject = new Subject();
+
   componentDidMount() {
+    const { searchDebounce } = this.props;
+
     this.request();
+    this.searchSubject
+      .pipe(debounceTime(searchDebounce))
+      .subscribe(this.handleSearch);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -714,7 +728,7 @@ export default class LazyLog extends Component {
         {enableSearch && (
           <SearchBar
             filterActive={isFilteringLinesWithMatches}
-            onSearch={this.handleSearch}
+            onSearch={keywords => this.searchSubject.next(keywords)}
             onClearSearch={this.handleClearSearch}
             onFilterLinesWithMatches={this.handleFilterLinesWithMatches}
             resultsCount={resultLines.length}
