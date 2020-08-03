@@ -476,6 +476,13 @@ export default class LazyLog extends Component {
   handleSearch = keywords => {
     const { resultLines, searchKeywords } = this.state;
     const { caseInsensitive, stream, websocket } = this.props;
+
+    if (keywords === '') {
+      this.handleClearSearch();
+
+      return;
+    }
+
     const currentResultLines =
       !stream && !websocket && keywords === searchKeywords
         ? resultLines
@@ -495,7 +502,7 @@ export default class LazyLog extends Component {
     const { searchKeywords } = this.state;
 
     if (searchKeywords && searchKeywords.length > SEARCH_MIN_KEYWORDS) {
-      this.handleSearch(this.state.searchKeywords);
+      this.searchSubject.next(this.state.searchKeywords);
     }
   };
 
@@ -729,7 +736,7 @@ export default class LazyLog extends Component {
           <SearchBar
             filterActive={isFilteringLinesWithMatches}
             onSearch={keywords => this.searchSubject.next(keywords)}
-            onClearSearch={this.handleClearSearch}
+            onClearSearch={() => this.searchSubject.next('')}
             onFilterLinesWithMatches={this.handleFilterLinesWithMatches}
             resultsCount={resultLines.length}
             disabled={count === 0}
