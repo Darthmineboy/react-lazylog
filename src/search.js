@@ -1,7 +1,10 @@
 import { decode, encode } from './encoding';
-import { getLinesLengthRanges } from './utils';
+import { CancelledError, getLinesLengthRanges, waitTimeout } from './utils';
 
-export const searchIndexes = (rawKeywords, rawLog) => {
+export const searchIndexes = async (rawKeywords, rawLog, cancellable) => {
+  const PROCESS_ITEMS_SYNC_MIN = 10000;
+  const PROCESS_ITEMS_SYNC_MAX = 1000000;
+  let processItemsSync = PROCESS_ITEMS_SYNC_MAX;
   const keywords = Array.from(encode(rawKeywords));
   const table = [-1, 0];
   const keywordsLength = keywords.length;
@@ -11,10 +14,22 @@ export const searchIndexes = (rawKeywords, rawLog) => {
   let fileIndex = 0;
   let index = 0;
   let position = 2;
-
   // Build a table for the search algorithm.
   // This takes O(needleLength) steps.
+  let processed = 0;
+
   while (position < keywordsLength) {
+    processed += 1;
+
+    if (processed % processItemsSync === 0) {
+      if (cancellable.isCancelled()) {
+        throw new CancelledError();
+      }
+
+      // eslint-disable-next-line
+            await waitTimeout();
+    }
+
     if (keywords[position - 1] === keywords[keywordsIndex]) {
       keywordsIndex += 1;
       table[position] = keywordsIndex;
@@ -29,9 +44,23 @@ export const searchIndexes = (rawKeywords, rawLog) => {
 
   const results = [];
 
+  processItemsSync = Math.max(PROCESS_ITEMS_SYNC_MIN, fileLength / 100);
+  processItemsSync = Math.min(PROCESS_ITEMS_SYNC_MAX, processItemsSync);
+  processItemsSync = Math.ceil(processItemsSync);
+
   // Scan the haystack.
   // This takes O(haystackLength) steps.
   while (fileIndex + index < fileLength) {
+    processed += 1;
+
+    if (processed % processItemsSync === 0) {
+      if (cancellable.isCancelled()) {
+        throw new CancelledError();
+      }
+      // eslint-disable-next-line
+            await waitTimeout();
+    }
+
     if (keywords[index] === rawLog[fileIndex + index]) {
       if (index === maxKeywordsIndex) {
         results.push(fileIndex);
@@ -50,7 +79,12 @@ export const searchIndexes = (rawKeywords, rawLog) => {
   return results;
 };
 
-export const searchLines = (rawKeywords, rawLog, isCaseInsensitive) => {
+export const searchLines = async (
+  rawKeywords,
+  rawLog,
+  isCaseInsensitive,
+  cancellable
+) => {
   let keywords = rawKeywords;
   let log = rawLog;
 
@@ -59,7 +93,7 @@ export const searchLines = (rawKeywords, rawLog, isCaseInsensitive) => {
     log = encode(decode(log).toLowerCase());
   }
 
-  const results = searchIndexes(keywords, log);
+  const results = await searchIndexes(keywords, log, cancellable);
   const linesRanges = getLinesLengthRanges(log);
   const maxLineRangeIndex = linesRanges.length;
   const maxResultIndex = results.length;

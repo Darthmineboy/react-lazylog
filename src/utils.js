@@ -131,3 +131,29 @@ export const searchFormatPart = ({
 
   return formattedPart;
 };
+
+export class Cancellable {
+  cancelled = false;
+
+  isCancelled() {
+    return this.cancelled;
+  }
+
+  cancel() {
+    this.cancelled = true;
+  }
+}
+
+/* Does not inherit from error as the transpiler does not support
+ * extending any built-in JavaScript classes,
+ * causing `new CancelledError() instanceof CancelledError === false`
+ * https://stackoverflow.com/a/43595110/9386244
+ */
+export class CancelledError {}
+
+export const waitTimeout = async (timeout = 0) =>
+  new Promise(resolve => {
+    setTimeout(() => {
+      resolve();
+    }, timeout);
+  });

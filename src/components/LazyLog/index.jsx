@@ -23,6 +23,8 @@ import {
   getHighlightRange,
   searchFormatPart,
   convertBufferToLines,
+  Cancellable,
+  CancelledError,
 } from '../../utils';
 import Line from '../Line';
 import Loading from '../Loading';
@@ -473,9 +475,14 @@ export default class LazyLog extends Component {
     });
   };
 
-  handleSearch = keywords => {
+  handleSearch = async keywords => {
     const { resultLines, searchKeywords } = this.state;
     const { caseInsensitive, stream, websocket } = this.props;
+
+    if (this.searchCancel) {
+      this.searchCancel.cancel();
+      this.searchCancel = null;
+    }
 
     if (keywords === '') {
       this.handleClearSearch();
@@ -483,19 +490,47 @@ export default class LazyLog extends Component {
       return;
     }
 
-    const currentResultLines =
-      !stream && !websocket && keywords === searchKeywords
-        ? resultLines
-        : searchLines(keywords, this.encodedLog, caseInsensitive);
+    this.setState({
+      loadingSearch: true,
+    });
 
-    this.setState(
-      {
-        resultLines: currentResultLines,
-        isSearching: true,
-        searchKeywords: keywords,
-      },
-      this.filterLinesWithMatches
-    );
+    try {
+      const cancellable = new Cancellable();
+
+      this.searchCancel = cancellable;
+      const currentResultLines =
+        !stream && !websocket && keywords === searchKeywords
+          ? resultLines
+          : await searchLines(
+              keywords,
+              this.encodedLog,
+              caseInsensitive,
+              this.searchCancel
+            );
+
+      if (cancellable.isCancelled()) {
+        // Ignore result as it was cancelled
+        return;
+      }
+
+      this.setState(
+        {
+          resultLines: currentResultLines,
+          isSearching: true,
+          searchKeywords: keywords,
+          loadingSearch: false,
+        },
+        this.filterLinesWithMatches
+      );
+
+      this.searchCancel = null;
+    } catch (e) {
+      if (e instanceof CancelledError) {
+        // Silence
+      } else {
+        throw e;
+      }
+    }
   };
 
   forceSearch = () => {
@@ -515,6 +550,7 @@ export default class LazyLog extends Component {
       resultLineUniqueIndexes: [],
       isFilteringLinesWithMatches: this.state.isFilteringLinesWithMatches,
       scrollToIndex: 0,
+      loadingSearch: false,
     });
   };
 
@@ -533,14 +569,12 @@ export default class LazyLog extends Component {
     const { resultLines, lines, isFilteringLinesWithMatches } = this.state;
 
     if (resultLines.length > 0 && isFilteringLinesWithMatches) {
-      const resultLineUniqueIndexes = [...new Set(resultLines)];
+      const resultLineUniqueIndexes = new Set(resultLines);
 
       this.setState({
-        resultLineUniqueIndexes,
+        resultLineUniqueIndexes: [...resultLineUniqueIndexes],
         filteredLines: lines.filter((line, index) =>
-          resultLineUniqueIndexes.some(
-            resultLineIndex => index + 1 === resultLineIndex
-          )
+          resultLineUniqueIndexes.has(index + 1)
         ),
       });
     }
@@ -727,6 +761,7 @@ export default class LazyLog extends Component {
       isFilteringLinesWithMatches,
       filteredLines = List(),
       count,
+      loadingSearch,
     } = this.state;
     const rowCount = isFilteringLinesWithMatches ? filteredLines.size : count;
 
@@ -740,6 +775,7 @@ export default class LazyLog extends Component {
             onFilterLinesWithMatches={this.handleFilterLinesWithMatches}
             resultsCount={resultLines.length}
             disabled={count === 0}
+            loading={loadingSearch}
           />
         )}
         <AutoSizer

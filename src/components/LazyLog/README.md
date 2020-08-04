@@ -4,7 +4,7 @@ Normal log viewing using a `url`:
 const url = 'https://gist.githubusercontent.com/helfi92/96d4444aa0ed46c5f9060a789d316100/raw/ba0d30a9877ea5cc23c7afcd44505dbc2bab1538/typical-live_backing.log';
 
 <div style={{ height: 500, width: 902 }}>
-  <LazyLog extraLines={1} enableSearch url={url} caseInsensitive searchDebounce={500} />
+  <LazyLog extraLines={1} enableSearch url={url} caseInsensitive />
 </div>
 ```
 
@@ -61,5 +61,15 @@ let socket = null;
     }}
   />
   </div>
+</div>
+```
+
+Large log viewing with debounced search using a `url`:
+
+```js
+const url = 'https://raw.githubusercontent.com/linuxacademy/content-elastic-log-samples/master/access.log';
+
+<div style={{ height: 500, width: 902 }}>
+  <LazyLog extraLines={1} enableSearch url={url} caseInsensitive searchDebounce={300} />
 </div>
 ```

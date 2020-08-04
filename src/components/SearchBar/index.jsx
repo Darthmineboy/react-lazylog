@@ -38,6 +38,10 @@ export default class SearchBar extends Component {
      * If true, the input field and filter button will be disabled.
      */
     disabled: bool,
+    /**
+     * Indicates whether a search is currently taking place.
+     */
+    loading: bool,
   };
 
   static defaultProps = {
@@ -81,23 +85,26 @@ export default class SearchBar extends Component {
   };
 
   render() {
-    const { resultsCount, filterActive, disabled } = this.props;
+    const { resultsCount, filterActive, disabled, loading } = this.props;
     const matchesLabel = `match${resultsCount === 1 ? '' : 'es'}`;
     const filterIcon = filterActive ? active : inactive;
 
     return (
       <div className={`react-lazylog-searchbar ${searchBar}`}>
-        <input
-          autoComplete="off"
-          type="text"
-          name="search"
-          placeholder="Search"
-          className={`react-lazylog-searchbar-input ${searchInput}`}
-          onChange={this.handleSearchChange}
-          onKeyPress={this.handleSearchKeyPress}
-          value={this.state.keywords}
-          disabled={disabled}
-        />
+        <span style={{ position: 'relative' }}>
+          <input
+            autoComplete="off"
+            type="text"
+            name="search"
+            placeholder="Search"
+            className={`react-lazylog-searchbar-input ${searchInput}`}
+            onChange={this.handleSearchChange}
+            onKeyPress={this.handleSearchKeyPress}
+            value={this.state.keywords}
+            disabled={disabled}
+          />
+          {loading && this.renderLoader()}
+        </span>
         <button
           disabled={disabled}
           className={`react-lazylog-searchbar-filter ${
@@ -113,6 +120,41 @@ export default class SearchBar extends Component {
           {resultsCount} {matchesLabel}
         </span>
       </div>
+    );
+  }
+
+  renderLoader() {
+    const size = 20;
+
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 38 38"
+        xmlns="http://www.w3.org/2000/svg"
+        stroke="#fff"
+        style={{
+          position: 'absolute',
+          right: '13px',
+          top: '50%',
+          marginTop: `-${20 / 2}px`,
+        }}>
+        <g fill="none" fillRule="evenodd">
+          <g transform="translate(1 1)" strokeWidth="2">
+            <circle strokeOpacity=".5" cx="18" cy="18" r="18" />
+            <path d="M36 18c0-9.94-8.06-18-18-18">
+              <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0 18 18"
+                to="360 18 18"
+                dur="1s"
+                repeatCount="indefinite"
+              />
+            </path>
+          </g>
+        </g>
+      </svg>
     );
   }
 }

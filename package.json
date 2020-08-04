@@ -20,7 +20,7 @@
   "scripts": {
     "build": "neutrino lint --fix && neutrino build",
     "prepare": "neutrino lint --fix && neutrino build",
-    "lint": "neutrino lint",
+    "lint": "neutrino lint --fix",
     "start": "neutrino styleguide:start",
     "precommit": "neutrino stage",
     "deploy": "neutrino styleguide:build && gh-pages --remote upstream -d styleguide"
