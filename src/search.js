@@ -27,7 +27,7 @@ export const searchIndexes = async (rawKeywords, rawLog, cancellable) => {
       }
 
       // eslint-disable-next-line
-            await waitTimeout();
+      await waitTimeout();
     }
 
     if (keywords[position - 1] === keywords[keywordsIndex]) {
@@ -58,7 +58,7 @@ export const searchIndexes = async (rawKeywords, rawLog, cancellable) => {
         throw new CancelledError();
       }
       // eslint-disable-next-line
-            await waitTimeout();
+      await waitTimeout();
     }
 
     if (keywords[index] === rawLog[fileIndex + index]) {
